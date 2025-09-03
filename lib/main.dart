@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
+import 'pushup_service.dart';
 
 void main() {
   runApp(const PushupCounterApp());
@@ -33,17 +35,66 @@ class PushupCounterHome extends StatefulWidget {
 
 class _PushupCounterHomeState extends State<PushupCounterHome> {
   int _pushupCount = 0;
+  int _maxRecord = 0;
 
-  void _incrementPushups() {
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+    _setupWidgetListener();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize widget
+    await PushupService.initializeWidget();
+
+    // Load saved data
+    final currentCount = await PushupService.getCurrentCount();
+    final maxRecord = await PushupService.getMaxRecord();
+
     setState(() {
-      _pushupCount++;
+      _pushupCount = currentCount;
+      _maxRecord = maxRecord;
     });
   }
 
-  void _resetCounter() {
+  void _setupWidgetListener() {
+    // Listen for widget taps
+    HomeWidget.widgetClicked.listen((Uri? uri) {
+      if (uri != null) {
+        _showWidgetTappedMessage();
+      }
+    });
+  }
+
+  void _showWidgetTappedMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('🎯 Opened from widget! Ready to count pushups!'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _incrementPushups() async {
+    final newCount = _pushupCount + 1;
+    setState(() {
+      _pushupCount = newCount;
+      if (newCount > _maxRecord) {
+        _maxRecord = newCount;
+      }
+    });
+
+    await PushupService.saveCurrentCount(newCount);
+  }
+
+  Future<void> _resetCounter() async {
     setState(() {
       _pushupCount = 0;
     });
+
+    await PushupService.resetCurrentCount();
   }
 
   @override
@@ -61,18 +112,115 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                'Record: $_maxRecord',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Widget preview section
+            Container(
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.only(bottom: 30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    spreadRadius: 2,
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Home Screen Widget Preview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // Circular widget preview
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.3),
+                          spreadRadius: 2,
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$_pushupCount',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Text(
+                          'pushups',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  Text(
+                    'Tap widget to open app',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Icon representing pushup
             Icon(
               Icons.fitness_center,
-              size: 80,
+              size: 60,
               color: Theme.of(context).colorScheme.primary,
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // Counter display
             Container(
@@ -92,9 +240,9 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
               child: Column(
                 children: [
                   const Text(
-                    'Pushups',
+                    'Current Session',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey,
                     ),
@@ -103,7 +251,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
                   Text(
                     '$_pushupCount',
                     style: TextStyle(
-                      fontSize: 72,
+                      fontSize: 64,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -112,7 +260,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
               ),
             ),
 
-            const SizedBox(height: 50),
+            const SizedBox(height: 40),
 
             // Action buttons
             Row(

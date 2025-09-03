@@ -1,6 +1,6 @@
 # Pushup Counter
 
-A clean and motivational Flutter app for tracking your pushup workouts.
+A clean and motivational Flutter app for tracking your pushup workouts with a beautiful home screen widget.
 
 ## Features
 
@@ -10,6 +10,9 @@ A clean and motivational Flutter app for tracking your pushup workouts.
 - 📱 **Multiple Input Methods**: Tap buttons or use the large floating action button
 - 🔄 **Reset Functionality**: Start fresh anytime
 - 💪 **Fitness-Focused**: Designed specifically for pushup tracking
+- 🏠 **Home Screen Widget**: Circular widget showing your current pushup count
+- 📊 **Progress Tracking**: Keeps track of your all-time record
+- 💾 **Data Persistence**: Your progress is saved between sessions
 
 ## Screenshots
 
@@ -46,6 +49,17 @@ flutter run
 1. **Count Pushups**: Tap the "Add Pushup" button or the large floating action button
 2. **View Progress**: Watch your count grow and see motivational messages
 3. **Reset**: Tap the "Reset" button to start a new session
+4. **Add Widget**: Long-press your home screen → Widgets → Find "Pushup Counter" → Add the circular widget
+5. **Widget Interaction**: Tap the widget on your home screen to quickly open the app
+
+## Home Screen Widget
+
+The app includes a beautiful circular home screen widget that:
+- 🟠 **Displays your current pushup count** in a circular orange design
+- 🔄 **Updates automatically** when you add pushups in the app
+- 📱 **Opens the app** when tapped for quick access
+- 📏 **Resizable** - can be made larger or smaller on your home screen
+- 🎨 **Matches the app theme** with the same orange color scheme
 
 ## Motivational Messages
 
