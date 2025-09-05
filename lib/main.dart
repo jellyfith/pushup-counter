@@ -34,9 +34,7 @@ class PushupRecordKeeperHome extends StatefulWidget {
 }
 
 class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
-  int _currentSessionCount = 0;
   int _personalRecord = 0;
-  bool _newRecordSet = false;
 
   @override
   void initState() {
@@ -50,13 +48,10 @@ class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
     await PushupService.initializeWidget();
 
     // Load saved data
-    final currentCount = await PushupService.getCurrentCount();
     final maxRecord = await PushupService.getMaxRecord();
 
     setState(() {
-      _currentSessionCount = currentCount;
       _personalRecord = maxRecord;
-      _newRecordSet = currentCount > maxRecord;
     });
   }
 
@@ -79,24 +74,57 @@ class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
     );
   }
 
-  Future<void> _incrementPushups() async {
-    final newCount = _currentSessionCount + 1;
-    setState(() {
-      _currentSessionCount = newCount;
-      if (newCount > _personalRecord) {
-        _personalRecord = newCount;
-        _newRecordSet = true;
-      }
-    });
-    await PushupService.saveCurrentCount(newCount);
+  // Add this method to show a dialog for editing the record
+  Future<void> _editRecordDialog() async {
+    final controller = TextEditingController(text: _personalRecord.toString());
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Pushup Record'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: 'Enter new record'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = int.tryParse(controller.text);
+              if (value != null && value >= 0) {
+                Navigator.of(context).pop(value);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) {
+      setState(() {
+        _personalRecord = result;
+      });
+      await PushupService.saveMaxRecord(result);
+    }
   }
 
-  Future<void> _resetCounter() async {
+  void _incrementRecord() async {
     setState(() {
-      _currentSessionCount = 0;
-      _newRecordSet = false;
+      _personalRecord++;
     });
-    await PushupService.resetCurrentCount();
+    await PushupService.saveMaxRecord(_personalRecord);
+  }
+
+  void _decrementRecord() async {
+    if (_personalRecord > 0) {
+      setState(() {
+        _personalRecord--;
+      });
+      await PushupService.saveMaxRecord(_personalRecord);
+    }
   }
 
   @override
@@ -142,7 +170,7 @@ class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
             ),
             const SizedBox(height: 20),
 
-            // Personal Record display (main)
+            // Personal Record display (main) with editable and increment/decrement controls
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -164,159 +192,51 @@ class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: _newRecordSet ? Theme.of(context).colorScheme.primary : Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '$_personalRecord',
-                    style: TextStyle(
-                      fontSize: 64,
-                      fontWeight: FontWeight.bold,
-                      color: _newRecordSet ? Theme.of(context).colorScheme.primary : Colors.black,
-                    ),
-                  ),
-                  if (_newRecordSet)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        '🎉 New Record! 🎉',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Current Session display (secondary)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
-                    spreadRadius: 1,
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Current Session',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '$_currentSessionCount',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        iconSize: 36,
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: _decrementRecord,
+                      ),
+                      GestureDetector(
+                        onTap: _editRecordDialog,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$_personalRecord',
+                            style: TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        iconSize: 36,
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: _incrementRecord,
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 30),
-
-            // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Reset button
-                ElevatedButton.icon(
-                  onPressed: _currentSessionCount > 0 ? _resetCounter : null,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reset Session'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                ),
-
-                // Add pushup button
-                ElevatedButton.icon(
-                  onPressed: _incrementPushups,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Pushup'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // Motivational text
-            if (_currentSessionCount > 0)
-              Text(
-                _getMotivationalMessage(_currentSessionCount),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                textAlign: TextAlign.center,
-              ),
           ],
         ),
       ),
-
-      // Large floating action button for easy tapping
-      floatingActionButton: FloatingActionButton.large(
-        onPressed: _incrementPushups,
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(
-          Icons.add,
-          size: 40,
-          color: Colors.white,
-        ),
-      ),
     );
-  }
-
-  String _getMotivationalMessage(int count) {
-    if (count >= 100) {
-      return "🔥 Amazing! You're crushing it! 🔥";
-    } else if (count >= 50) {
-      return "💪 Halfway to 100! Keep going! 💪";
-    } else if (count >= 25) {
-      return "🚀 Great progress! You're doing awesome! 🚀";
-    } else if (count >= 10) {
-      return "⭐ Nice work! Keep it up! ⭐";
-    } else {
-      return "🎯 Great start! Every rep counts! 🎯";
-    }
   }
 }
