@@ -3,16 +3,16 @@ import 'package:home_widget/home_widget.dart';
 import 'pushup_service.dart';
 
 void main() {
-  runApp(const PushupCounterApp());
+  runApp(const PushupRecordKeeperApp());
 }
 
-class PushupCounterApp extends StatelessWidget {
-  const PushupCounterApp({super.key});
+class PushupRecordKeeperApp extends StatelessWidget {
+  const PushupRecordKeeperApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pushup Counter',
+      title: 'Pushup Record Keeper',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.orange,
@@ -20,22 +20,23 @@ class PushupCounterApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const PushupCounterHome(),
+      home: const PushupRecordKeeperHome(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class PushupCounterHome extends StatefulWidget {
-  const PushupCounterHome({super.key});
+class PushupRecordKeeperHome extends StatefulWidget {
+  const PushupRecordKeeperHome({super.key});
 
   @override
-  State<PushupCounterHome> createState() => _PushupCounterHomeState();
+  State<PushupRecordKeeperHome> createState() => _PushupRecordKeeperHomeState();
 }
 
-class _PushupCounterHomeState extends State<PushupCounterHome> {
-  int _pushupCount = 0;
-  int _maxRecord = 0;
+class _PushupRecordKeeperHomeState extends State<PushupRecordKeeperHome> {
+  int _currentSessionCount = 0;
+  int _personalRecord = 0;
+  bool _newRecordSet = false;
 
   @override
   void initState() {
@@ -53,8 +54,9 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
     final maxRecord = await PushupService.getMaxRecord();
 
     setState(() {
-      _pushupCount = currentCount;
-      _maxRecord = maxRecord;
+      _currentSessionCount = currentCount;
+      _personalRecord = maxRecord;
+      _newRecordSet = currentCount > maxRecord;
     });
   }
 
@@ -70,7 +72,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
   void _showWidgetTappedMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('🎯 Opened from widget! Ready to count pushups!'),
+        content: const Text('🎯 Opened from widget! Ready to set a new record!'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         duration: const Duration(seconds: 2),
       ),
@@ -78,22 +80,22 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
   }
 
   Future<void> _incrementPushups() async {
-    final newCount = _pushupCount + 1;
+    final newCount = _currentSessionCount + 1;
     setState(() {
-      _pushupCount = newCount;
-      if (newCount > _maxRecord) {
-        _maxRecord = newCount;
+      _currentSessionCount = newCount;
+      if (newCount > _personalRecord) {
+        _personalRecord = newCount;
+        _newRecordSet = true;
       }
     });
-
     await PushupService.saveCurrentCount(newCount);
   }
 
   Future<void> _resetCounter() async {
     setState(() {
-      _pushupCount = 0;
+      _currentSessionCount = 0;
+      _newRecordSet = false;
     });
-
     await PushupService.resetCurrentCount();
   }
 
@@ -103,7 +105,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text(
-          'Pushup Counter',
+          'Pushup Record Keeper',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
@@ -117,7 +119,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
-                'Record: $_maxRecord',
+                'Record: $_personalRecord',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -140,7 +142,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
             ),
             const SizedBox(height: 20),
 
-            // Counter display
+            // Personal Record display (main)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -157,19 +159,71 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    'Current Session',
+                  Text(
+                    'Personal Record',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                      color: _newRecordSet ? Theme.of(context).colorScheme.primary : Colors.grey,
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '$_pushupCount',
+                    '$_personalRecord',
                     style: TextStyle(
                       fontSize: 64,
+                      fontWeight: FontWeight.bold,
+                      color: _newRecordSet ? Theme.of(context).colorScheme.primary : Colors.black,
+                    ),
+                  ),
+                  if (_newRecordSet)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '🎉 New Record! 🎉',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Current Session display (secondary)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    spreadRadius: 1,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Current Session',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$_currentSessionCount',
+                    style: TextStyle(
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -178,7 +232,7 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 30),
 
             // Action buttons
             Row(
@@ -186,9 +240,9 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
               children: [
                 // Reset button
                 ElevatedButton.icon(
-                  onPressed: _pushupCount > 0 ? _resetCounter : null,
+                  onPressed: _currentSessionCount > 0 ? _resetCounter : null,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reset'),
+                  label: const Text('Reset Session'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[600],
                     foregroundColor: Colors.white,
@@ -225,9 +279,9 @@ class _PushupCounterHomeState extends State<PushupCounterHome> {
             const SizedBox(height: 30),
 
             // Motivational text
-            if (_pushupCount > 0)
+            if (_currentSessionCount > 0)
               Text(
-                _getMotivationalMessage(_pushupCount),
+                _getMotivationalMessage(_currentSessionCount),
                 style: TextStyle(
                   fontSize: 16,
                   fontStyle: FontStyle.italic,
